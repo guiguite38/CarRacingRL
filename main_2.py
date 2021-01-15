@@ -48,7 +48,7 @@ model.add(Conv2D(filters=16, kernel_size=(8,8), padding='same', data_format="cha
 model.add(MaxPooling2D(pool_size=(2, 2)))
 
 model.add(Conv2D(filters=16, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(96, 96, 3)))
-model.add(BatchNormalization())
+model.add(BatchNormalization()) 
 # model.add(Activation('relu'))
 
 model.add(Flatten())
@@ -127,7 +127,7 @@ def train_model(x_train,y_train,model):
             # self.model.fit(np.array(train_state), np.array(train_target), epochs=1, verbose=0)
             # if self.epsilon > self.epsilon_min:
             #     self.epsilon *= self.epsilon_decay
-
+ 
 
             action = agent.act(current_state_frame_stack)
 
