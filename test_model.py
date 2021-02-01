@@ -17,18 +17,18 @@ if __name__ == "__main__":
     i = 0
     # Play once trained !
     obs = process_state_image(ENV.reset())
-    obs = np.array(obs).reshape(1,96,96,1)
+    # obs = np.array(obs).reshape(1,96,96,1)
     while dones == False and i <= 10000:
-        #print(f"[main.main] observation format {obs}")
-        print(f"[main.main] observation length {len(obs)}")
+        print(f"[main.main] obs shape {obs.shape}")
         #q_value = model.predict([obs,ACTION_SPACE])
         # q_values = [model.predict([[obs]*12,ACTION_SPACE])
-
-        q_values = [model.predict([[obs],[a]]) for a in ACTION_SPACE]
+        states = np.array([obs for _ in ACTION_SPACE])
+        best_q_value = np.argmax(model.predict([states,ACTION_SPACE]))
         
-        action = ACTION_SPACE[np.argmax(q_values)]
-        print(f"[main.main] action {action}")
-        obs, rewards, dones, info = ENV.step(action)
+        action = ACTION_SPACE[best_q_value]
+        print(f"[main.main] action {action}")        
+        obs, rewards, dones, info = ENV.step(action)     
+        obs = process_state_image(obs)
         ENV.render()
         i+=1
     print("there were " + str(i) + " steps")
