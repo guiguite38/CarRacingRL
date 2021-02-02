@@ -161,19 +161,19 @@ if __name__ == "__main__":
         loss="mean_squared_error", optimizer=Adam(learning_rate=1e-3), metrics=["mse"]
     )
 
-    training_cycles = 3
+    training_cycles = 20
 
     for cycle in range(training_cycles):
         print(f"Entering cycle {cycle}")
         epsilon = epsilon * 0.85
-        episode_time_limit = min(episode_time_limit *1.1,50)
+        episode_time_limit = min(episode_time_limit *1.1,60)
         s, a, y = generate_x_y(
             model,
             ENV,
             epsilon=epsilon,
             nb_episodes=3,
             episode_time_limit = episode_time_limit,
-            render=True,
+            render=False,
         )
         s = np.array(s)
         a = np.array(a)
