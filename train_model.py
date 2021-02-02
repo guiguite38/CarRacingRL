@@ -52,7 +52,7 @@ def network():
     z = Dense(256, activation="relu")(combined)
     # z = Dropout(0.5)(z)
     z = Dense(128, activation="relu")(z)
-    z = Dense(1, activation="relu")(z)
+    z = Dense(1, activation="tanh")(z)
 
     # our model will accept the inputs of the two branches and
     # then output a single value
@@ -68,9 +68,7 @@ def process_state_image(state):
     # state = cv2.cvtColor(state, cv2.COLOR_BGR2GRAY)
     state = state.astype(float)
     state /= 255.0
-    state = state.reshape(96,96,3)
-    # print(f"[train_model.process_state_image] state type = {type(state)}")
-    # print(f"[train_model.process_state_image] state shape = {state.shape}")    
+    state = state.reshape(96,96,3)  
     return state
     
 
@@ -102,7 +100,6 @@ def generate_x_y(model, game, nb_episodes=10, epsilon=0.3, episode_time_limit=40
                 r*=1.5
             s1 = process_state_image(s1_unprocessed)
 
-            # cumul_rewards += r
             # save expected q_value ce sont les y
             # save chosen action ce sont les x
             s_list.append(s)
@@ -118,10 +115,12 @@ def generate_x_y(model, game, nb_episodes=10, epsilon=0.3, episode_time_limit=40
             # Q[s,a] = Q[s,a] + alpha* (r + gamma * np.max(Q[s1,:]) - Q[s,a])
             q_value = q_value_predict + alpha * (r + gamma * q_value_future - q_value_predict)
             
-            # print(f"[main.generate_x_y] q_value {q_value[0][0]}")
+            print(f"[main.generate_x_y] q_value {q_value[0][0]}   \taction {a} \treward {r}")
             y.append(q_value[0][0])
             s = s1
+            cumul_rewards+=r
         print(f"[main.generate_x_y] frames computed : {nb_frames}")
+        print(f"[main.generate_x_y] cumul reward : {cumul_rewards}")
     return s_list, a_list, y
 
 
@@ -132,12 +131,12 @@ if __name__ == '__main__':
     model = network()
     model.compile(loss='mean_squared_error', optimizer=Adam(learning_rate=1e-3), metrics=['mse'])
 
-    training_cycles = 10
+    training_cycles = 3
 
     for cycle in range(training_cycles):
         print(f"Entering cycle {cycle}")
         epsilon = epsilon * 0.85
-        s, a, y = generate_x_y(model,ENV, epsilon=epsilon, nb_episodes=10)
+        s, a, y = generate_x_y(model,ENV, epsilon=epsilon, nb_episodes=3)
         s=np.array(s)
         a=np.array(a)
         y=np.array(y)

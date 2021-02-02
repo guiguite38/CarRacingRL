@@ -10,7 +10,6 @@ ENV = gym.envs.make("CarRacing-v0")
 
 ## Load Model
 model = tf.keras.models.load_model('models\\trained_model')
-# model.compile(loss='mean_squared_error', optimizer=Adam(learning_rate=1e-3), metrics=['accuracy', 'mse'])
 
 if __name__ == "__main__":
     dones = False
@@ -20,10 +19,10 @@ if __name__ == "__main__":
     # obs = np.array(obs).reshape(1,96,96,1)
     while dones == False and i <= 10000:
         print(f"[main.main] obs shape {obs.shape}")
-        #q_value = model.predict([obs,ACTION_SPACE])
-        # q_values = [model.predict([[obs]*12,ACTION_SPACE])
         states = np.array([obs for _ in ACTION_SPACE])
         best_q_value = np.argmax(model.predict([states,ACTION_SPACE]))
+
+        print(f"[main.main] model output {model.predict([states,ACTION_SPACE])}")
         
         action = ACTION_SPACE[best_q_value]
         print(f"[main.main] action {action}")        
