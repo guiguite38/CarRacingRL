@@ -124,6 +124,7 @@ def generate_x_y(
 
             if a[1] == 1 and a[2] == 0:
                 r *= 1.5
+            cumul_rewards += r
             s1 = np.concatenate((s[:,:,3:],process_state_image(s1_unprocessed)), axis=2)
 
             # save expected q_value ce sont les y
