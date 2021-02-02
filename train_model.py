@@ -63,7 +63,7 @@ def network():
     z = Dense(256, activation="relu")(combined)
     # z = Dropout(0.5)(z)
     z = Dense(128, activation="relu")(z)
-    z = Dense(1, activation="relu")(z)
+    z = Dense(1, activation="tanh")(z)
 
     # our model will accept the inputs of the two branches and
     # then output a single value
@@ -126,7 +126,6 @@ def generate_x_y(
                 r *= 1.5
             s1 = np.concatenate((s[:,:,3:],process_state_image(s1_unprocessed)), axis=2)
 
-            # cumul_rewards += r
             # save expected q_value ce sont les y
             # save chosen action ce sont les x
             s_list.append(s)
@@ -148,6 +147,7 @@ def generate_x_y(
             if render:
                 ENV.render()
         print(f"[main.generate_x_y] frames computed : {nb_frames}")
+        print(f"[main.generate_x_y] cumul reward : {cumul_rewards}")
     return s_list, a_list, y
 
 
@@ -161,7 +161,7 @@ if __name__ == "__main__":
         loss="mean_squared_error", optimizer=Adam(learning_rate=1e-3), metrics=["mse"]
     )
 
-    training_cycles = 10
+    training_cycles = 3
 
     for cycle in range(training_cycles):
         print(f"Entering cycle {cycle}")
