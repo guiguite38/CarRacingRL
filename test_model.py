@@ -15,7 +15,8 @@ if __name__ == "__main__":
     dones = False
     i = 0
     # Play once trained !
-    obs = process_state_image(ENV.reset())
+    # obs = process_state_image(ENV.reset()) # single frame version
+    obs = np.array([process_state_image(ENV.reset()) for _ in range(4)]).reshape(96,96,12)
     # obs = np.array(obs).reshape(1,96,96,1)
     while dones == False and i <= 10000:
         print(f"[main.main] obs shape {obs.shape}")
@@ -26,8 +27,8 @@ if __name__ == "__main__":
         
         action = ACTION_SPACE[best_q_value]
         print(f"[main.main] action {action}")        
-        obs, rewards, dones, info = ENV.step(action)     
-        obs = process_state_image(obs)
+        obs_unprocessed, rewards, dones, info = ENV.step(action)
+        obs = np.concatenate((obs[:,:,3:],process_state_image(obs_unprocessed)), axis=2)
         ENV.render()
         i+=1
     print("there were " + str(i) + " steps")
