@@ -20,11 +20,11 @@ ENV = gym.envs.make("CarRacing-v0")
 # steer gas break in [-1,1] [0,1] [0,1] -> dtype float
 ACTION_SPACE = np.array(
     [
+        [0, 1, 0],
         [-1, 1, 0.2],
         [0, 1, 0.2],
         [1, 1, 0.2],  # 3 directions (-1,0,1) + 100% gaz (1) + 20% frein (.2)
         [-1, 1, 0],
-        [0, 1, 0],
         [1, 1, 0],  # Plein gaz + 0% frein
         [-1, 0, 0.2],
         [0, 0, 0.2],
@@ -101,19 +101,29 @@ def generate_x_y(
     y = []
     for i in range(nb_episodes):
         print(f"--- episode {i} ---")
-        s = np.array([process_state_image(game.reset()) for _ in range(4)]).reshape(96,96,12)
+        original_state = process_state_image(game.reset())
+        s = np.array([original_state for _ in range(4)]).reshape(96,96,12)
         cumul_rewards = 0
         e = False
         start_time = time.time()
         nb_frames = 0
-        while e == False and time.time() - start_time < episode_time_limit:
+        nb_negative_rewards = 0
+        # while e == False and time.time() - start_time < episode_time_limit and nb_negative_rewards < 10:
+        while e == False and time.time() and nb_negative_rewards < 10:
             nb_frames += 1
             # chose action with epsilon greedy
             if np.random.random() < epsilon:  # epsilon
-                a = random.choice(ACTION_SPACE)
-                q_value_predicts = []
-                idx = 0
-                q_value_predicts.append(model.predict([s.reshape(1,96,96,12), a.reshape(1,3)])[0])
+                if np.random.random() < 0.5:
+                    # epsilon booster
+                    a = ACTION_SPACE[0]
+                    q_value_predicts = []
+                    idx = 0
+                    q_value_predicts.append(model.predict([s.reshape(1,96,96,12), a.reshape(1,3)])[0])
+                else:
+                    a = random.choice(ACTION_SPACE)
+                    q_value_predicts = []
+                    idx = 0
+                    q_value_predicts.append(model.predict([s.reshape(1,96,96,12), a.reshape(1,3)])[0])
             else:
                 states = np.array([s for _ in ACTION_SPACE])
                 q_value_predicts = model.predict([states, ACTION_SPACE])
@@ -121,6 +131,9 @@ def generate_x_y(
                 a = ACTION_SPACE[idx]
 
             s1_unprocessed, r, e, _ = game.step(a)
+
+            # We check for negative rewards. If too many occur in a row, we terminate the episode
+            nb_negative_rewards+= 1 if nb_frames > 30 and reward < 0 else 0
 
             if a[1] == 1 and a[2] == 0:
                 r *= 1.5
@@ -138,19 +151,12 @@ def generate_x_y(
             q_value_future = np.max([model.predict([new_states, ACTION_SPACE])])
 
             # Q[s,a] = Q[s,a] + alpha* (r + gamma * np.max(Q[s1,:]) - Q[s,a])
-            # q_value = q_value_predict + alpha * (r + gamma * q_value_future - q_value_predict)
-            q_value = r + gamma * q_value_future
+            q_value = q_value_predict + alpha * (r + gamma * q_value_future - q_value_predict)
+            # q_value = r + gamma * q_value_future
             
             # print(f"[main.generate_x_y] q_value {q_value}   \taction {a} \treward {r}")
 
-            ## matéo intent ##
-            # y.append(q_value)
-            # q_value = q_value_predict + alpha * (
-            #     r + gamma * q_value_future - q_value_predict
-            # )
-            # print(f"[main.generate_x_y] q_value {q_value}\treward {r}")
-
-            y.append(q_value[0])
+            y.append(q_value)
             s = s1
 
             if render:
@@ -164,23 +170,24 @@ if __name__ == '__main__':
     alpha = 0.5
     gamma = 0.9
     epsilon = 0.5
-    episode_time_limit=20
+    nb_episodes = 10 # peut être augmenter le nombre de données pour avoir une meilleur loss ? là ça semble nul, faudrait observer avec tensorboard
+    episode_time_limit=20 # faire fortement grandir la limite épisode peut être pertinent avec le boost
     model = network()
     model.compile(
-        loss="mean_squared_error", optimizer=Adam(learning_rate=1e-3), metrics=["mse"]
+        loss="logcosh", optimizer=Adam(learning_rate=1e-3), metrics=["mse","mae"] # tester avec logcosh pour gérer les outliers mal prédits
     )
 
-    training_cycles = 20
+    training_cycles = 40
 
     for cycle in range(training_cycles):
         print(f"Entering cycle {cycle}")
         epsilon = epsilon * 0.85
-        episode_time_limit = min(episode_time_limit *1.1,60)
+        # episode_time_limit = min(episode_time_limit *1.1,60) 
         s, a, y = generate_x_y(
             model,
             ENV,
             epsilon=epsilon,
-            nb_episodes=3,
+            nb_episodes=nb_episodes,
             episode_time_limit = episode_time_limit,
             render=False,
         )
@@ -191,7 +198,7 @@ if __name__ == '__main__':
         norm = np.linalg.norm(y)
         y_norm = y/norm
         ##
-        model.fit([s,a],y_norm,verbose=2)
+        model.fit([s,a],y_norm,verbose=2, validation_split=0.1)
 
     print(f"[main.__main__] len y {len(y)}")
     print(f"[main.__main__] len states {len(s)}")
