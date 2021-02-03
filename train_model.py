@@ -19,8 +19,8 @@ ENV = gym.envs.make("CarRacing-v0")
 ### Discretisation ###
 # steer gas break in [-1,1] [0,1] [0,1] -> dtype float
 ACTION_SPACE = np.array([
-    [-1, 1, 0.2], [0, 1, 0.2], [1, 1, 0.2], # 3 directions (-1,0,1) + 100% gaz (1) + 20% frein (.2) 
-    [-1, 1,   0], [0, 1,   0], [1, 1,   0], # Plein gaz + 0% frein
+    [0, 1,   0], [0, 1, 0.2], [1, 1, 0.2], # 3 directions (-1,0,1) + 100% gaz (1) + 20% frein (.2) 
+    [-1, 1,   0], [-1, 1, 0.2], [1, 1,   0], # Plein gaz + 0% frein
     [-1, 0, 0.2], [0, 0, 0.2], [1, 0, 0.2], # 0% gaz + 20% frein
     [-1, 0,   0], [0, 0,   0], [1, 0,   0]  # 0% gaz + 0% frein
 ], dtype=float)
@@ -108,15 +108,16 @@ def generate_x_y(model, game, nb_episodes=10, epsilon=0.3, episode_time_limit=40
             s=s.reshape(1,96,96,3)
             a=a.reshape(1,3)
 
-            q_value_predict = model.predict([s,a])
+            # q_value_predict = model.predict([s,a])
             new_states = np.array([s1 for _ in ACTION_SPACE])
             q_value_future = np.max([model.predict([new_states,ACTION_SPACE])])
 
             # Q[s,a] = Q[s,a] + alpha* (r + gamma * np.max(Q[s1,:]) - Q[s,a])
-            q_value = q_value_predict + alpha * (r + gamma * q_value_future - q_value_predict)
+            # q_value = q_value_predict + alpha * (r + gamma * q_value_future - q_value_predict)
+            q_value = r + gamma * q_value_future
             
-            print(f"[main.generate_x_y] q_value {q_value[0][0]}   \taction {a} \treward {r}")
-            y.append(q_value[0][0])
+            print(f"[main.generate_x_y] q_value {q_value}   \taction {a} \treward {r}")
+            y.append(q_value)
             s = s1
             cumul_rewards+=r
         print(f"[main.generate_x_y] frames computed : {nb_frames}")
@@ -125,7 +126,7 @@ def generate_x_y(model, game, nb_episodes=10, epsilon=0.3, episode_time_limit=40
 
 
 if __name__ == '__main__':
-    alpha = 0.1
+    alpha = 0.5
     gamma = 0.9
     epsilon = 0.5
     model = network()
@@ -139,8 +140,12 @@ if __name__ == '__main__':
         s, a, y = generate_x_y(model,ENV, epsilon=epsilon, nb_episodes=3)
         s=np.array(s)
         a=np.array(a)
-        y=np.array(y)
-        model.fit([s,a],y,verbose=2)
+        y=np.array(y) # to be normalized
+        ##
+        norm = np.linalg.norm(y)
+        y_norm = y/norm
+        ##
+        model.fit([s,a],y_norm,verbose=2)
     
     print(f"[main.__main__] len y {len(y)}")
     print(f"[main.__main__] len states {len(s)}")
