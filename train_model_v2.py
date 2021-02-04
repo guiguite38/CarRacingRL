@@ -159,6 +159,7 @@ if __name__ == '__main__':
     alpha = 0.5
     gamma = 0.9
     epsilon = 0.5
+    batch_size = 256
     nb_episodes = 10 # peut être augmenter le nombre de données pour avoir une meilleur loss ? là ça semble nul, faudrait observer avec tensorboard
     episode_time_limit=20 # faire fortement grandir la limite épisode peut être pertinent avec le boost
     model = network()
@@ -168,6 +169,8 @@ if __name__ == '__main__':
 
     training_cycles = 600
 
+    s_buffer = []
+    y_buffer = []
     for cycle in range(training_cycles):
         print(f"Entering cycle {cycle}")
         epsilon = epsilon * 0.85
@@ -180,13 +183,14 @@ if __name__ == '__main__':
             episode_time_limit = episode_time_limit,
             render=False,
         )
-        s = np.array(s)
-        y = np.array(y) # to be normalized
+        s_buffer.append(s)
+        y_buffer.append(y) # to be normalized ?
         # ##
         # norm = np.linalg.norm(y)
         # y_norm = y/norm
         # ##
-        model.fit(s,y,verbose=2, validation_split=0.1)
+        batch_idx = idx = np.random.choice(np.arange(len(s_buffer)), batch_size, replace=False)
+        model.fit(np.array(s_buffer)[batch_idx],np.array(y_buffer)[batch_idx],verbose=2, validation_split=0.1)
 
     print(f"[main.__main__] len y {len(y)}")
     print(f"[main.__main__] len states {len(s)}")
