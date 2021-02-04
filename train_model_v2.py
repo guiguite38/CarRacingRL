@@ -169,8 +169,8 @@ if __name__ == '__main__':
 
     training_cycles = 600
 
-    s_buffer = []
-    y_buffer = []
+    s_buffer = np.array([])
+    y_buffer = np.array([])
     for cycle in range(training_cycles):
         print(f"Entering cycle {cycle}")
         epsilon = epsilon * 0.85
@@ -183,8 +183,12 @@ if __name__ == '__main__':
             episode_time_limit = episode_time_limit,
             render=False,
         )
-        s_buffer.append(s)
-        y_buffer.append(y) # to be normalized ?
+        if len(s_buffer) == 0:
+            s_buffer = s
+            y_buffer = y
+        else:
+            np.append(s_buffer,s)
+            np.append(y_buffer,y) # to be normalized ?
         # ##
         # norm = np.linalg.norm(y)
         # y_norm = y/norm
