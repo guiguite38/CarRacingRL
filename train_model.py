@@ -133,7 +133,7 @@ def generate_x_y(
             s1_unprocessed, r, e, _ = game.step(a)
 
             # We check for negative rewards. If too many occur in a row, we terminate the episode
-            nb_negative_rewards+= 1 if nb_frames > 30 and reward < 0 else 0
+            nb_negative_rewards+= 1 if nb_frames > 30 and r < 0 else 0
 
             if a[1] == 1 and a[2] == 0:
                 r *= 1.5
