@@ -193,7 +193,7 @@ if __name__ == '__main__':
         # norm = np.linalg.norm(y)
         # y_norm = y/norm
         # ##
-        batch_idx = idx = np.random.choice(np.arange(len(s_buffer)), min(batch_size, len(s_buffer)), replace=False)
+        batch_idx = idx = np.random.choice(np.arange(len(s_buffer)), min(batch_size, len(s_buffer)), replace=False, p = y_buffer/np.sum(y_buffer))
         model.fit(np.array(s_buffer)[batch_idx],np.array(y_buffer)[batch_idx],verbose=2, validation_split=0.1)
 
     print(f"[main.__main__] len y {len(y)}")
