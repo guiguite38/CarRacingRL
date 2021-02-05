@@ -44,7 +44,6 @@ def network():
     """OUR NETWORK PREDICTING"""
     # define two sets of inputs
     input_state = Input(shape=(96, 96, 12))
-    input_action = Input(shape=(3,))
 
     # the first branch operates on the first input = input_state
     x = Conv2D(filters=16, kernel_size=(8, 8), padding="same")(input_state)
@@ -53,21 +52,16 @@ def network():
     x = MaxPooling2D(pool_size=(2, 2))(x)
     x = BatchNormalization()(x)
     x = Flatten()(x)
-    x = Model(inputs=input_state, outputs=x)
-
-    # combine the output of the two branches
-    combined = Concatenate(axis=1)([x.output, input_action])
 
     # apply a FC layer and then a regression prediction on the
-    # combined outputs
-    z = Dense(256, activation="relu")(combined)
+    z = Dense(256, activation="relu")(x)
     # z = Dropout(0.5)(z)
     z = Dense(128, activation="relu")(z)
-    z = Dense(1, activation="tanh")(z)
+    z = Dense(12)(z)
 
     # our model will accept the inputs of the two branches and
     # then output a single value
-    model = Model(inputs=[input_state, input_action], outputs=z)
+    model = Model(inputs=input_state, outputs=z)
     return model
 
 
@@ -97,7 +91,6 @@ def generate_x_y(
         f"[main.generate_x_y] entering generate_x_y, launching {nb_episodes} episodes"
     )
     s_list = []
-    a_list = []
     y = []
     for i in range(nb_episodes):
         print(f"--- episode {i} ---")
@@ -113,20 +106,18 @@ def generate_x_y(
             nb_frames += 1
             # chose action with epsilon greedy
             if np.random.random() < epsilon:  # epsilon
-                if np.random.random() < 0.5:
-                    # epsilon booster
-                    a = ACTION_SPACE[0]
-                    q_value_predicts = []
-                    idx = 0
-                    q_value_predicts.append(model.predict([s.reshape(1,96,96,12), a.reshape(1,3)])[0])
-                else:
-                    a = random.choice(ACTION_SPACE)
-                    q_value_predicts = []
-                    idx = 0
-                    q_value_predicts.append(model.predict([s.reshape(1,96,96,12), a.reshape(1,3)])[0])
+                # if np.random.random() < 0.5:
+                #     # epsilon booster
+                #     a = ACTION_SPACE[0]
+                #     q_value_predicts = []
+                #     idx = 0
+                #     q_value_predicts.append(model.predict([s.reshape(1,96,96,12), a.reshape(1,3)])[0])
+                # else:
+                q_value_predicts = model.predict(s.reshape(1,96,96,12))[0]
+                idx = np.random.choice(len(ACTION_SPACE))
+                a = ACTION_SPACE[idx]
             else:
-                states = np.array([s for _ in ACTION_SPACE])
-                q_value_predicts = model.predict([states, ACTION_SPACE])
+                q_value_predicts = model.predict(s.reshape(1,96,96,12))[0]
                 idx = np.argmax(q_value_predicts)
                 a = ACTION_SPACE[idx]
 
@@ -143,47 +134,48 @@ def generate_x_y(
             # save expected q_value ce sont les y
             # save chosen action ce sont les x
             s_list.append(s)
-            a_list.append(a)
 
-            # q_value_predict = model.predict([s,a])
             q_value_predict = q_value_predicts[idx]
-            new_states = np.array([s1 for _ in ACTION_SPACE])
-            q_value_future = np.max([model.predict([new_states, ACTION_SPACE])])
+            q_value_future = np.max([model.predict(s1.reshape(1,96,96,12))])
 
-            # Q[s,a] = Q[s,a] + alpha* (r + gamma * np.max(Q[s1,:]) - Q[s,a])
             q_value = q_value_predict + alpha * (r + gamma * q_value_future - q_value_predict)
             # q_value = r + gamma * q_value_future
             
             # print(f"[main.generate_x_y] q_value {q_value}   \taction {a} \treward {r}")
 
-            y.append(q_value)
+            #   In this version only the explored state is modified :
+            q_value_predicts[idx] = q_value
+            y.append(q_value_predicts)
             s = s1
 
             if render:
                 ENV.render()
         print(f"[main.generate_x_y] frames computed : {nb_frames}")
         print(f"[main.generate_x_y] cumul reward : {cumul_rewards}")
-    return s_list, a_list, y
+    return s_list, y
 
 
 if __name__ == '__main__':
     alpha = 0.5
     gamma = 0.9
     epsilon = 0.5
-    nb_episodes = 10 # peut être augmenter le nombre de données pour avoir une meilleur loss ? là ça semble nul, faudrait observer avec tensorboard
+    batch_size = 256
+    nb_episodes = 5 # peut être augmenter le nombre de données pour avoir une meilleur loss ? là ça semble nul, faudrait observer avec tensorboard
     episode_time_limit=20 # faire fortement grandir la limite épisode peut être pertinent avec le boost
     model = network()
     model.compile(
         loss="logcosh", optimizer=Adam(learning_rate=1e-3), metrics=["mse","mae"] # tester avec logcosh pour gérer les outliers mal prédits
     )
 
-    training_cycles = 40
+    training_cycles = 600
 
+    s_buffer = np.array([])
+    y_buffer = np.array([])
     for cycle in range(training_cycles):
         print(f"Entering cycle {cycle}")
         epsilon = epsilon * 0.85
         # episode_time_limit = min(episode_time_limit *1.1,60) 
-        s, a, y = generate_x_y(
+        s, y = generate_x_y(
             model,
             ENV,
             epsilon=epsilon,
@@ -191,14 +183,19 @@ if __name__ == '__main__':
             episode_time_limit = episode_time_limit,
             render=False,
         )
-        s = np.array(s)
-        a = np.array(a)
-        y = np.array(y) # to be normalized
-        ##
-        norm = np.linalg.norm(y)
-        y_norm = y/norm
-        ##
-        model.fit([s,a],y_norm,verbose=2, validation_split=0.1)
+        if len(s_buffer) == 0:
+            s_buffer = s
+            y_buffer = y
+        else:
+            np.append(s_buffer,s)
+            np.append(y_buffer,y) # to be normalized ?
+        # ##
+        # norm = np.linalg.norm(y)
+        # y_norm = y/norm
+        # ##
+        bestQ = [np.max(y) for y in y_buffer]
+        batch_idx = idx = np.random.choice(np.arange(len(s_buffer)), min(batch_size, len(s_buffer)), replace=False, p = bestQ/np.sum(bestQ))
+        model.fit(np.array(s_buffer)[batch_idx],np.array(y_buffer)[batch_idx],verbose=2, validation_split=0.1)
 
     print(f"[main.__main__] len y {len(y)}")
     print(f"[main.__main__] len states {len(s)}")
