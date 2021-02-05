@@ -160,7 +160,7 @@ if __name__ == '__main__':
     gamma = 0.9
     epsilon = 0.5
     batch_size = 256
-    nb_episodes = 10 # peut être augmenter le nombre de données pour avoir une meilleur loss ? là ça semble nul, faudrait observer avec tensorboard
+    nb_episodes = 5 # peut être augmenter le nombre de données pour avoir une meilleur loss ? là ça semble nul, faudrait observer avec tensorboard
     episode_time_limit=20 # faire fortement grandir la limite épisode peut être pertinent avec le boost
     model = network()
     model.compile(
@@ -193,7 +193,8 @@ if __name__ == '__main__':
         # norm = np.linalg.norm(y)
         # y_norm = y/norm
         # ##
-        batch_idx = idx = np.random.choice(np.arange(len(s_buffer)), min(batch_size, len(s_buffer)), replace=False, p = y_buffer/np.sum(y_buffer))
+        bestQ = [np.max(y) for y in y_buffer]
+        batch_idx = idx = np.random.choice(np.arange(len(s_buffer)), min(batch_size, len(s_buffer)), replace=False, p = bestQ/np.sum(bestQ))
         model.fit(np.array(s_buffer)[batch_idx],np.array(y_buffer)[batch_idx],verbose=2, validation_split=0.1)
 
     print(f"[main.__main__] len y {len(y)}")
