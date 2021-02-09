@@ -8,7 +8,7 @@ Maintenir à partir d'images une voiture sur une piste dans une simulation, en g
 ## Contexte
 Projet : Reinforcement Learning  
 Spécialité de filière : Intelligence Artificielle  
-Ecoles d'ingénieurs associées : ENSC et ENSEIRB  
+Ecoles d'ingénieurs associées : ENSC et ENSEIRB
 Durée : 1 mois
 
 
