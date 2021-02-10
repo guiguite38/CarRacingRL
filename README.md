@@ -71,6 +71,10 @@ Normalisation des Q-values : pas d'augmentation de performance notable, non cons
 
 Ajout d'une séparation des données en train+validation au cours de l'entrainement pour réduire le biais d'overfitting sur les métriques.
 
+Ajout d'un bootstrap pendant l'entrainement : au lieu d'une exploration complètement aléatoire, l'agent est encouragé à accélérer 10% du temps.
+L'impact n'étant pas visible de manière positive sur l'entrâinement, nous ne l'avons pas concervé.
+
+Limitation de chaque épisode dans le temps (30 à 50s) puis limitation en nombre de récompenses négatives consécutives (meilleurs résultats)
 
 ## Pistes additionnelles
 

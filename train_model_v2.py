@@ -23,10 +23,8 @@ ENV = gym.envs.make("CarRacing-v0")
 
 def network():
     """OUR NETWORK PREDICTING"""
-    # define two sets of inputs
     input_state = Input(shape=(96, 96, 12))
 
-    # the first branch operates on the first input = input_state
     x = Conv2D(filters=16, kernel_size=(8, 8), padding="same")(input_state)
     x = MaxPooling2D(pool_size=(2, 2))(x)
     x = Conv2D(filters=16, kernel_size=(3, 3), padding="same")(x)
@@ -34,14 +32,11 @@ def network():
     x = BatchNormalization()(x)
     x = Flatten()(x)
 
-    # apply a FC layer and then a regression prediction on the
     z = Dense(256, activation="relu")(x)
-    # z = Dropout(0.5)(z)
     z = Dense(128, activation="relu")(z)
     z = Dense(12)(z)
 
-    # our model will accept the inputs of the two branches and
-    # then output a single value
+
     model = Model(inputs=input_state, outputs=z)
     return model
 
@@ -69,7 +64,7 @@ def generate_x_y(
         nb_frames = 0
         nb_negative_rewards = 0
         # while e == False and time.time() - start_time < episode_time_limit and nb_negative_rewards < 10:
-        while e == False and nb_negative_rewards < 10:
+        while e == False and nb_negative_rewards < 25:
             nb_frames += 1
             # chose action with epsilon greedy
             if np.random.random() < epsilon:  # epsilon
@@ -91,9 +86,14 @@ def generate_x_y(
             s1_unprocessed, r, e, _ = game.step(a)
 
             # We check for negative rewards. If too many occur in a row, we terminate the episode
-            nb_negative_rewards+= 1 if nb_frames > 30 and r < 0 else 0
+            if nb_frames > 30 and r < 0:
+                nb_negative_rewards+= 1
+            else :
+                nb_negative_rewards = 0
 
-            if a[1] == 1 and a[2] == 0:
+            if a[1] == 1 and a[2] == 0 and r>0:
+                r *= 1.5
+            if a[1] == 0 and r<0:
                 r *= 1.5
             cumul_rewards += r
             s1 = np.concatenate((s[:,:,3:],process_state_image(s1_unprocessed)), axis=2)

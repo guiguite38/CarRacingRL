@@ -44,15 +44,13 @@ running_reward = 0
 episode_count = 0
 
 while True:  # Run until solved
-    state = env.reset()
+    original_state = process_state_image(env.reset())
+    state = np.array([original_state for _ in range(4)]).reshape(96,96,12)
     episode_reward = 0
     with tf.GradientTape() as tape:
         for timestep in range(1, max_steps_per_episode):
-            # env.render(); Adding this line would show the attempts
+            env.render()# Adding this line would show the attempts
             # of the agent in a pop up window.
-
-            state = tf.convert_to_tensor(state)
-            state = tf.expand_dims(state, 0)
 
             # Predict action probabilities and estimated future rewards
             # from environment state
@@ -64,11 +62,16 @@ while True:  # Run until solved
             action_probs_history.append(tf.math.log(action_probs[0, action]))
 
             # Apply the sampled action in our environment
-            state, reward, done, _ = env.step(action)
+            unprocessed_state, reward, done, _ = env.step(action)
+            state = np.concatenate(state[3:],process_state_image(unprocessed_state))
             rewards_history.append(reward)
             episode_reward += reward
+            if nb_frames > 30 and r < 0:
+                nb_negative_rewards+= 1
+            else :
+                nb_negative_rewards = 0
 
-            if done:
+            if done or nb_negative_rewards > 25:
                 break
 
         # Update running reward to check condition for solving
@@ -123,7 +126,11 @@ while True:  # Run until solved
     if episode_count % 10 == 0:
         template = "running reward: {:.2f} at episode {}"
         print(template.format(running_reward, episode_count))
+        if episode_count % 200 == 0 and episode_count != 0:
+            model.save(f"models\\trained_model_policy_{episode_count}")
 
-    if running_reward > 195:  # Condition to consider the task solved
-        print("Solved at episode {}!".format(episode_count))
-        break
+    # if running_reward > 195:  # Condition to consider the task solved
+    #     print("Solved at episode {}!".format(episode_count))
+    #     model.save(f"models\\trained_model_policy_{episode_count}")
+    #     break
+
