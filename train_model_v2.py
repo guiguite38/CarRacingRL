@@ -12,29 +12,10 @@ import gym
 from collections import deque
 import random
 import time
+from train_model import process_state_image, ACTION_SPACE
 
 ### Environnement ###
 ENV = gym.envs.make("CarRacing-v0")
-
-### Discretisation ###
-# steer gas break in [-1,1] [0,1] [0,1] -> dtype float
-ACTION_SPACE = np.array(
-    [
-        [0, 1, 0],
-        [-1, 1, 0.2],
-        [0, 1, 0.2],
-        [1, 1, 0.2],  # 3 directions (-1,0,1) + 100% gaz (1) + 20% frein (.2)
-        [-1, 1, 0],
-        [1, 1, 0],  # Plein gaz + 0% frein
-        [-1, 0, 0.2],
-        [0, 0, 0.2],
-        [1, 0, 0.2],  # 0% gaz + 20% frein
-        [-1, 0, 0],
-        [0, 0, 0],
-        [1, 0, 0],  # 0% gaz + 0% frein
-    ],
-    dtype=float,
-)
 
 # input is 96*96*3 ints between 0 and 255
 # output must be 12 values between -1 and 1 -6 TANH activation function
@@ -63,20 +44,6 @@ def network():
     # then output a single value
     model = Model(inputs=input_state, outputs=z)
     return model
-
-
-def process_state_image(state):
-    """
-    Output :
-    - np_array(96,96,3)
-    """
-    # state = cv2.cvtColor(state, cv2.COLOR_BGR2GRAY)
-    state = state.astype(float)
-    state /= 255.0
-    state = state.reshape(96, 96, 3)
-    # print(f"[train_model.process_state_image] state type = {type(state)}")
-    # print(f"[train_model.process_state_image] state shape = {state.shape}")
-    return state
 
 
 def generate_x_y(
