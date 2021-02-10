@@ -9,7 +9,7 @@ import numpy as np
 ENV = gym.envs.make("CarRacing-v0")
 
 ## Load Model
-model = tf.keras.models.load_model('models\\trained_model_550_v5')
+model = tf.keras.models.load_model('models\\trained_model')
 
 if __name__ == "__main__":
     dones = False
