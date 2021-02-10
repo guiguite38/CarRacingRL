@@ -2,8 +2,9 @@ import gym
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
-from tensorflow.keras.layers import Conv2D, BatchNormalization, MaxPooling2D,Dense, Flatten
+from tensorflow.keras.layers import Conv2D, BatchNormalization, MaxPooling2D, Dense, Flatten
 from train_model import process_state_image, ACTION_SPACE
+from tensorflow.keras import Input, Model
 
 # Configuration parameters for the whole setup
 seed = 42
@@ -27,14 +28,14 @@ def network(num_actions):
     x = MaxPooling2D(pool_size=(2, 2))(x)
     x = BatchNormalization()(x)
     x = Flatten()(x) 
-    #separate actor and critic
-    action = layers.Dense(num_actions, activation="softmax")(x)
-    critic = layers.Dense(1)(x)
+    # separate actor and critic
+    action = Dense(num_actions, activation="softmax")(x)
+    critic = Dense(1)(x)
 
-    model = keras.Model(inputs=inputs, outputs=[action, critic])
+    model = keras.Model(inputs=input_state, outputs=[action, critic])
     return model
 
-model = network
+model = network(num_actions)
 optimizer = keras.optimizers.Adam(learning_rate=0.01)
 huber_loss = keras.losses.Huber()
 action_probs_history = []
@@ -42,6 +43,8 @@ critic_value_history = []
 rewards_history = []
 running_reward = 0
 episode_count = 0
+
+#model.compile(optimizer=optimizer)
 
 while True:  # Run until solved
     original_state = process_state_image(env.reset())
@@ -54,7 +57,7 @@ while True:  # Run until solved
 
             # Predict action probabilities and estimated future rewards
             # from environment state
-            action_probs, critic_value = model(state)
+            action_probs, critic_value = model(state.reshape(1,96,96,12))
             critic_value_history.append(critic_value[0, 0])
 
             # Sample action from action probability distribution
@@ -62,7 +65,7 @@ while True:  # Run until solved
             action_probs_history.append(tf.math.log(action_probs[0, action]))
 
             # Apply the sampled action in our environment
-            unprocessed_state, reward, done, _ = env.step(action)
+            unprocessed_state, reward, done, _ = env.step(ACTION_SPACE[action])
             state = np.concatenate(state[3:],process_state_image(unprocessed_state))
             rewards_history.append(reward)
             episode_reward += reward
