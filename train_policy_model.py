@@ -29,8 +29,13 @@ def network(num_actions):
     x = BatchNormalization()(x)
     x = Flatten()(x) 
     # separate actor and critic
-    action = Dense(num_actions, activation="softmax")(x)
-    critic = Dense(1)(x)
+    action = Dense(1000, activation="relu")(x)
+    action = Dense(512, activation="relu")(action)
+    action = Dense(num_actions, activation="softmax")(action)
+
+    critic = Dense(1000, activation="relu")(x)
+    critic = Dense(512, activation="relu")(critic)
+    critic = Dense(1)(critic)
 
     model = keras.Model(inputs=input_state, outputs=[action, critic])
     return model
@@ -47,6 +52,7 @@ episode_count = 0
 #model.compile(optimizer=optimizer)
 
 while True:  # Run until solved
+    print(f"--episode {episode_count}--")
     original_state = process_state_image(env.reset())
     state = np.array([original_state for _ in range(4)]).reshape(96,96,12)
     episode_reward = 0
@@ -115,6 +121,7 @@ while True:  # Run until solved
             )
 
         # Backpropagation
+        print("Backpropagating loss...")
         loss_value = sum(actor_losses) + sum(critic_losses)
         grads = tape.gradient(loss_value, model.trainable_variables)
         optimizer.apply_gradients(zip(grads, model.trainable_variables))

@@ -40,6 +40,12 @@ Le réseau DQN estime la Q-valeur de chaque action pour un état donnée. Il ren
 L'apprentissage se fait sur un batch de transitions issu du memory buffer (état - action - récompense - nouvel état) qui priorise les transitions qui donnent de hautes récompenses.
 Gain de performance en vitesse d'exécution.
 
+train_policy_model.py
+--------------
+Entraine un réseau Acteur / Critique (qui entraine une policy et une estimation de Q-valeurs en parallèle)
+Les performances sont difficile à évaluer, sur les 20 épisodes d'entraînement.
+Contrairement aux version précédentes, cet entraînement se fait complètement on-policy (pas de memory buffer)
+
 test_model.py
 -------------
 
