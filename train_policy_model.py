@@ -66,10 +66,10 @@ while True:  # Run until solved
 
             # Apply the sampled action in our environment
             unprocessed_state, reward, done, _ = env.step(ACTION_SPACE[action])
-            state = np.concatenate(state[3:],process_state_image(unprocessed_state))
+            state = np.concatenate((state[:,:,3:],process_state_image(unprocessed_state)), axis=2)
             rewards_history.append(reward)
             episode_reward += reward
-            if nb_frames > 30 and r < 0:
+            if timestep > 1000 and reward < 0:
                 nb_negative_rewards+= 1
             else :
                 nb_negative_rewards = 0
